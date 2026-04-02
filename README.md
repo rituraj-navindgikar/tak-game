@@ -52,10 +52,10 @@ The `-O2` flag enables compiler optimization — makes the minimax search notice
 
 ---
 
-## Run the Web UI
+## Run the Human vs RL Web UI
 
 ```bash
-python3 app.py
+python3 huamn_vs_rl.py
 ```
 
 Open `http://localhost:5000` in your browser. Hit **New Game** and start playing.
@@ -77,6 +77,13 @@ Board columns are `a b c`, rows are `1 2 3`.
 ```
 
 **First move rule:** Your first move places the opponent's piece (standard Tak rule).
+
+## Run the Minimax agent vs RL
+
+```bash
+python3 minmax_vs_rl.py --games 20 --quiet
+```
+
 
 ---
 
