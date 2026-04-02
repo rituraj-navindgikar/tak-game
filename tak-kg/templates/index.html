@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tak 3x3</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f0ece4;
+    color: #2c2a26;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #3b2f1e;
+    letter-spacing: 6px;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    color: #9e8f7a;
+    margin-bottom: 36px;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+  }
+
+  .layout { display: flex; gap: 48px; align-items: flex-start; }
+
+  /* board */
+  .board-wrap { display: flex; flex-direction: column; align-items: center; }
+  .board {
+    display: grid;
+    grid-template-columns: 40px repeat(3, 140px);
+    grid-template-rows: repeat(3, 140px) 40px;
+    gap: 6px;
+  }
+
+  .row-label, .col-label {
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 1rem; color: #9e8f7a;
+  }
+
+  .cell {
+    background: #fff;
+    border: 2px solid #d8cfc4;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px;
+    position: relative;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .cell:nth-child(even) { background: #faf7f2; }
+  .cell:hover {
+    border-color: #b5a898;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  .cell-label {
+    position: absolute; top: 6px; left: 8px;
+    font-size: 0.65rem; color: #c4b9ab; font-weight: 500;
+  }
+
+  .stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 3px; }
+
+  .piece {
+    width: 80px; height: 22px; border-radius: 6px;
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 1px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  }
+  .piece.wall { width: 22px; height: 64px; border-radius: 6px; }
+  .piece.p0 { background: #d4a843; color: #fff; }
+  .piece.p1 { background: #4a7fc1; color: #fff; }
+
+  /* panel */
+  .panel { width: 260px; display: flex; flex-direction: column; gap: 14px; }
+
+  .info-box {
+    background: #fff;
+    border: 1px solid #d8cfc4;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .info-box h3 {
+    margin-bottom: 12px;
+    color: #6b5c4a;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 600;
+  }
+
+  .player-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px; border-radius: 8px;
+    background: #f7f3ee;
+    margin-bottom: 8px;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .player-row:last-child { margin-bottom: 0; }
+  .player-row.active { border-color: #d4a843; background: #fdf8ee; }
+
+  .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
+  .dot.p0 { background: #d4a843; }
+  .dot.p1 { background: #4a7fc1; }
+  .player-name { font-size: 0.88rem; font-weight: 500; display: flex; align-items: center; color: #3b2f1e; }
+  .flats-count { font-size: 0.82rem; color: #9e8f7a; font-weight: 500; }
+
+  .move-box { display: flex; flex-direction: column; gap: 10px; }
+  .move-box input {
+    background: #f7f3ee;
+    border: 2px solid #d8cfc4;
+    border-radius: 8px;
+    color: #2c2a26;
+    padding: 11px 14px;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  .move-box input:focus { border-color: #d4a843; background: #fff; }
+  .move-box input::placeholder { color: #c4b9ab; }
+
+  .move-box button {
+    padding: 11px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.5px;
+  }
+  .move-box button:hover { opacity: 0.88; transform: translateY(-1px); }
+  .move-box button:active { transform: translateY(0); }
+  .btn-move { background: #d4a843; color: #fff; }
+  .btn-new  { background: #4a7fc1; color: #fff; }
+
+  .status {
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    background: #fff;
+    border: 1px solid #d8cfc4;
+    min-height: 44px;
+    line-height: 1.6;
+    color: #6b5c4a;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+  .status.error { border-color: #e07070; color: #c0392b; background: #fff5f5; }
+  .status.win   { border-color: #d4a843; color: #8a6a1a; background: #fdf8ee; font-weight: 600; }
+  .status.info  { border-color: #4a7fc1; color: #2c5282; background: #f0f5ff; }
+
+  .move-hint {
+    font-size: 0.76rem; color: #9e8f7a; line-height: 1.8;
+    background: #fff;
+    border: 1px solid #d8cfc4;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .move-hint strong { color: #6b5c4a; display: block; margin-bottom: 4px; }
+  .move-hint code {
+    background: #f0ece4; padding: 1px 6px; border-radius: 4px;
+    color: #4a7fc1; font-size: 0.76rem; font-weight: 600;
+  }
+
+  .log {
+    background: #fff;
+    border: 1px solid #d8cfc4;
+    border-radius: 12px;
+    padding: 12px 14px;
+    max-height: 190px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+  .log-entry { padding: 4px 0; border-bottom: 1px solid #f0ece4; color: #9e8f7a; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry.you { color: #a07830; font-weight: 500; }
+  .log-entry.ai  { color: #3a6aaa; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<h1>TAK</h1>
+<p class="subtitle">3×3 · No Capstones · You vs AI</p>
+
+<div class="layout">
+  <!-- board -->
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+  </div>
+
+  <!-- panel -->
+  <div class="panel">
+    <div class="info-box">
+      <h3>Players</h3>
+      <div class="player-row" id="row-p0">
+        <span class="player-name"><span class="dot p0"></span>You (P1)</span>
+        <span class="flats-count" id="flats-p0">— flats</span>
+      </div>
+      <div class="player-row" id="row-p1">
+        <span class="player-name"><span class="dot p1"></span>AI (P2)</span>
+        <span class="flats-count" id="flats-p1">— flats</span>
+      </div>
+    </div>
+
+    <div class="info-box move-box">
+      <h3>Your Move</h3>
+      <input type="text" id="move-input" placeholder="e.g. Fa1" autocomplete="off" />
+      <button class="btn-move" onclick="submitMove()">Submit</button>
+      <button class="btn-new"  onclick="newGame()">New Game</button>
+    </div>
+
+    <div class="status" id="status">Press New Game to start.</div>
+
+    <div class="move-hint">
+      <strong>Move format:</strong><br>
+      <code>Fa1</code> place flat on a1<br>
+      <code>Sa1</code> place wall on a1<br>
+      <code>2a1&gt;11</code> move stack of 2 right, drop 1+1<br>
+      Columns: a b c &nbsp;|&nbsp; Rows: 1 2 3
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+</div>
+
+<script>
+const N = 3;
+let gameActive = false;
+
+async function newGame() {
+  const res = await fetch("/new_game", { method: "POST" });
+  const data = await res.json();
+  gameActive = true;
+  document.getElementById("log").innerHTML = "";
+  setStatus("Game started. You are Player 1 (gold). Make your first move.", "info");
+  renderBoard(data.board);
+  document.getElementById("move-input").focus();
+}
+
+async function submitMove() {
+  if (!gameActive) { setStatus("Start a new game first.", "error"); return; }
+  const input = document.getElementById("move-input");
+  const move = input.value.trim();
+  if (!move) return;
+  input.value = "";
+
+  const res = await fetch("/move", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ move })
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    setStatus(data.error || "Invalid move.", "error");
+    return;
+  }
+
+  addLog("you", "You: " + move);
+  if (data.ai_move) addLog("ai", "AI:  " + data.ai_move);
+
+  renderBoard(data.board);
+
+  if (data.board.game_over) {
+    gameActive = false;
+    setStatus(data.board.winner_msg, "win");
+  } else if (data.ai_move) {
+    setStatus(`You played ${move}  →  AI played ${data.ai_move}. Your turn.`, "info");
+  } else {
+    setStatus("Your turn.", "info");
+  }
+
+  input.focus();
+}
+
+function renderBoard(board) {
+  const el = document.getElementById("board");
+  el.innerHTML = "";
+
+  // row labels (3 down to 1) + col headers
+  // grid: col0=labels, col1-3=a,b,c  |  row0-2=3,2,1  row3=col labels
+  // We'll build row by row
+  for (let row = 3; row >= 1; row--) {
+    // row label
+    const lbl = document.createElement("div");
+    lbl.className = "row-label";
+    lbl.textContent = row;
+    el.appendChild(lbl);
+
+    for (let ci = 0; ci < N; ci++) {
+      const col = String.fromCharCode(97 + ci); // a,b,c
+      const idx = (row - 1) * N + ci;
+      const cellData = board.cells[idx];
+
+      const cell = document.createElement("div");
+      cell.className = "cell";
+
+      const clbl = document.createElement("div");
+      clbl.className = "cell-label";
+      clbl.textContent = col + row;
+      cell.appendChild(clbl);
+
+      if (cellData.stack.length > 0) {
+        const stack = document.createElement("div");
+        stack.className = "stack";
+        cellData.stack.forEach(piece => {
+          const p = document.createElement("div");
+          p.className = "piece p" + piece.player + (piece.type === "S" ? " wall" : "");
+          p.textContent = piece.type === "S" ? "W" : "F";
+          stack.appendChild(p);
+        });
+        cell.appendChild(stack);
+      }
+
+      el.appendChild(cell);
+    }
+  }
+
+  // col labels row
+  const empty = document.createElement("div"); // corner
+  el.appendChild(empty);
+  ["a","b","c"].forEach(c => {
+    const lbl = document.createElement("div");
+    lbl.className = "col-label";
+    lbl.textContent = c;
+    el.appendChild(lbl);
+  });
+
+  // update player info
+  document.getElementById("flats-p0").textContent = board.p1_flats + " flats";
+  document.getElementById("flats-p1").textContent = board.p2_flats + " flats";
+  document.getElementById("row-p0").className = "player-row" + (board.turn === 0 ? " active" : "");
+  document.getElementById("row-p1").className = "player-row" + (board.turn === 1 ? " active" : "");
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = "status " + (type || "");
+}
+
+function addLog(who, msg) {
+  const log = document.getElementById("log");
+  const entry = document.createElement("div");
+  entry.className = "log-entry " + who;
+  entry.textContent = msg;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+// enter key submits
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("move-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") submitMove();
+  });
+});
+</script>
+</body>
+</html>
