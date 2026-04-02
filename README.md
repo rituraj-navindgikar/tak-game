@@ -1,4 +1,3 @@
-
 # Tak 3x3 — AlphaZero RL Agent
 
 A 3×3 Tak game with a trained AlphaZero-style RL agent, playable via a browser UI.
@@ -17,7 +16,8 @@ Tak is a two-player abstract strategy game where the goal is to build a connecte
 
 ```
 tak-kg/
-├── app.py                      # Flask web server, hooks RL agent to UI
+├── human_vs_rl.py              # Flask web server, hooks RL agent to UI vs human
+├── minmax_vs_rl.py              # minmax,vs RL agent
 ├── alpha_zero_rl_model.py      # TakEnv, ActionSpace, TakNet, MCTS
 ├── Game.py                     # Game logic (rendering + move validation)
 ├── Board.py                    # Tkinter board renderer (used by Game.py)
@@ -35,6 +35,20 @@ tak-kg/
 ```bash
 pip install flask flask-cors torch numpy matplotlib
 ```
+
+### Compile the minimax AI
+
+```bash
+bash compile.sh
+```
+
+This compiles `minimax.cpp` into a `./minimax` binary using:
+
+```bash
+g++ -std=c++11 -O2 -o minimax minimax.cpp
+```
+
+The `-O2` flag enables compiler optimization — makes the minimax search noticeably faster. Required for `rl_vs_minimax.py` and the original client/server setup.
 
 ---
 
