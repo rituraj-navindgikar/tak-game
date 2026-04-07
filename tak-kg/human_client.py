@@ -9,7 +9,7 @@ def main():
     parser = argparse.ArgumentParser(description='Human Tak client')
     parser.add_argument('ip', type=str)
     parser.add_argument('port', type=int)
-    parser.add_argument('-n', dest='n', type=int, default=3)
+    parser.add_argument('-n', dest='n', type=int, default=5, help='Board size (default: 5)')
     args = parser.parse_args()
 
     s = socket.socket()

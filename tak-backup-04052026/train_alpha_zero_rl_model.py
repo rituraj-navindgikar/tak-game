@@ -12,9 +12,6 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import multiprocessing as mp
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-print(f"Using device: {device}")
-
 N = 5
 MAX_FLATS = 21
 MAX_STACK = N
@@ -26,20 +23,20 @@ C_PUCT = 1.5
 EPS    = 1e-8
 
 # number of cpus
-NUM_CPUS = 3
+NUM_CPUS = 64
 
 MAX_GAME_MOVES = 300
 
 
 # ---------- config ----------
-ITERATIONS  = 40
-GAMES       = 100
+ITERATIONS  = 50
+GAMES       = 200
 SIMS        = 50
-EPOCHS      = 10
-BATCH       = 256
-EVAL_GAMES  = 10
+EPOCHS      = 30
+BATCH       = 512
+EVAL_GAMES  = 6
 LR          = 5e-4
-BUFFER_MAX  = 25000
+BUFFER_MAX  = 50000
 ACCEPT_THR  = 0.0
 HIDDEN      = 256
 
@@ -305,25 +302,6 @@ def encode(env):
     v[128] = min(env.moves, 20) / 20.
     return v
 
-# road progress helper ─────────────────────────────────────────
-
-def road_progress(env, player):
-    """Largest connected component of player's flat stones, normalized 0-1."""
-    visited = set(); best = 0
-    for start in range(N * N):
-        if start in visited: continue
-        if not env.board[start]: continue
-        if env.board[start][-1] != (player, 'F'): continue
-        queue = [start]; component = {start}
-        while queue:
-            cur = queue.pop()
-            for nb in env._nb(cur):
-                if nb not in component and env.board[nb] and env.board[nb][-1] == (player, 'F'):
-                    component.add(nb); queue.append(nb)
-        visited |= component
-        best = max(best, len(component))
-    return best / (N * N)
-
 """## 4. Network"""
 
 # Call action space
@@ -533,3 +511,126 @@ def pit(net_new, net_old, n_games=20, n_sims=50, device='cpu'):
         elif w==new_p: nw += 1
         else:          ow += 1
     return nw, ow, d
+
+
+os.makedirs("tak_checkpoints", exist_ok=True)
+
+"""## 7. Training Loop"""
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"Using device: {device}")
+
+
+# ----------------------------
+
+net = TakNet(h=HIDDEN).to(device)
+
+# prev checkpoints
+# net.load_state_dict(torch.load("tak_checkpoints/alpha-zero-v4.pt", map_location=device))
+
+opt      = torch.optim.Adam(net.parameters(), lr=LR, weight_decay=1e-4)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=ITERATIONS, eta_min=1e-4)
+buf      = Buffer(BUFFER_MAX)
+
+
+best_net = copy.deepcopy(net)
+
+log = {"iter":[], "p_loss":[], "v_loss":[], "p0_wins":[], "p1_wins":[], "draws":[], "avg_reward":[]}
+
+iter_bar = tqdm(range(1, ITERATIONS+1), desc="iterations")
+
+with mp.Pool(processes=NUM_CPUS) as pool:
+    for it in iter_bar:
+        t0 = time.time()
+
+        # --- self-play ---
+        rewards = []
+        w_count = [0, 0, 0]
+        w_count = [0, 0, 0]
+        
+        net_state = {k: v.cpu() for k, v in net.state_dict().items()}
+        args = [(net_state, SIMS, 'cpu') for _ in range(GAMES)]
+
+
+        results = list(
+            tqdm(
+                pool.imap_unordered(play_game_worker, args, chunksize=1),
+                total=GAMES,
+                desc=f"[{it:2d}/{ITERATIONS}] self-play",
+                leave=False
+            )
+        )
+
+        for ex, winner in results:
+            buf.add(ex)
+            w_count[winner] += 1
+            rewards.append(sum(e[2] for e in ex) / len(ex))
+
+        # --- train ---
+        p_losses, v_losses = [], []
+        for _ in tqdm(range(EPOCHS), desc=f"[{it:2d}/{ITERATIONS}] training ", leave=False):
+            pl, vl = train_step(net, opt, buf.all(), BATCH)
+            p_losses.append(pl); v_losses.append(vl)
+
+        # --- eval ---
+        nw, ow, d = pit(net, best_net, EVAL_GAMES, SIMS, device=device)
+        total  = nw + ow + d
+        # accept = total > 0 and (nw / total) >= ACCEPT_THR
+        # if accept:
+        #     best_net = copy.deepcopy(net)
+
+        best_net = copy.deepcopy(net)
+        accept = True
+        # --- log ---
+        log["iter"].append(it)
+        log["p_loss"].append(np.mean(p_losses))
+        log["v_loss"].append(np.mean(v_losses))
+        log["p0_wins"].append(w_count[0])
+        log["p1_wins"].append(w_count[1])
+        log["draws"].append(w_count[2])
+        log["avg_reward"].append(np.mean(rewards))
+
+        iter_bar.set_postfix(
+            p_loss  = f"{log['p_loss'][-1]:.4f}",
+            v_loss  = f"{log['v_loss'][-1]:.4f}",
+            avg_r   = f"{log['avg_reward'][-1]:.3f}",
+            eval    = f"{nw}-{ow}-{d}",
+            status  = "yes" if accept else "no",
+            elapsed = f"{time.time()-t0:.0f}s"
+        )
+        scheduler.step()
+
+        # Save checkpoints
+        if it % 2 == 0:
+            torch.save(best_net.state_dict(), f"tak_checkpoints/best.pt")
+            torch.save(best_net.state_dict(), f"tak_checkpoints/iter_{it:04d}.pt")
+            print(f"  checkpoint saved at iter {it}")
+
+"""## 8. Save Model + Plot"""
+
+os.makedirs("tak_checkpoints", exist_ok=True)
+torch.save(best_net.state_dict(), "tak_checkpoints/best.pt")
+print("Saved tak_checkpoints/best.pt")
+
+
+
+fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+
+axes[0].plot(log["iter"], log["p_loss"],  label="policy loss", color="steelblue")
+axes[0].plot(log["iter"], log["v_loss"],  label="value loss",  color="coral")
+axes[0].set_title("Loss"); axes[0].legend(); axes[0].set_xlabel("Iteration")
+
+axes[1].plot(log["iter"], log["avg_reward"], color="seagreen")
+axes[1].set_title("Avg Reward per Game"); axes[1].set_xlabel("Iteration")
+axes[1].axhline(0, color='gray', linestyle='--', linewidth=0.8)
+
+its = np.array(log["iter"])
+axes[2].bar(its - 0.25, log["p0_wins"], 0.25, label="P0 wins", color="steelblue")
+axes[2].bar(its,        log["p1_wins"], 0.25, label="P1 wins", color="coral")
+axes[2].bar(its + 0.25, log["draws"],   0.25, label="Draws",   color="gray")
+axes[2].set_title("Game Outcomes per Iteration")
+axes[2].legend(); axes[2].set_xlabel("Iteration")
+
+plt.tight_layout()
+plt.savefig("training_curves.png", dpi=150)
+print("Plot saved to training_curves.png")

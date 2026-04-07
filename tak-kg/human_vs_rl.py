@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ── config ───────────────────────────────────────────────────────
-HIDDEN = 128
+HIDDEN = 256
 SIMS   = 100
 device = 'cpu'
 
@@ -43,8 +43,8 @@ def board_to_json(g):
         stack = g.board[idx]
         cells.append({
             "idx":   idx,
-            "col":   chr(idx % g.n + 97),
-            "row":   idx // g.n + 1,
+            "col":   chr(idx // g.n + 97),   # Game.py: col = idx // n
+            "row":   idx % g.n + 1,          # Game.py: row = idx % n + 1
             "stack": [{"player": p, "type": t} for p, t in stack],
             "top":   {"player": stack[-1][0], "type": stack[-1][1]} if stack else None
         })
@@ -66,7 +66,6 @@ def _winner(result):
 
 
 def print_board(g, label=""):
-    """Debug print board state to terminal."""
     print(f"\n{'='*40}")
     if label:
         print(f"  {label}")
@@ -76,16 +75,12 @@ def print_board(g, label=""):
         line = f"  {row+1} "
         for col in range(g.n):
             sq_str = chr(ord('a') + col) + str(row + 1)
-            idx    = g.square_to_num(sq_str)   # use Game.py's own indexing
+            idx    = g.square_to_num(sq_str)
             sq     = g.board[idx]
-            if not sq:
-                cell = "."
-            else:
-                cell = "".join(f"{'W' if t=='S' else 'F'}{'1' if p==0 else '2'}" for p, t in sq)
-            line += f"  {cell:<6}"
+            cell   = "." if not sq else "".join(f"{'W' if t=='S' else 'F'}{'1' if p==0 else '2'}" for p, t in sq)
+            line  += f"  {cell:<6}"
         print(line)
-    cols = "     " + "  ".join(f"{chr(ord('a')+c):<8}" for c in range(g.n))
-    print(cols)
+    print("     " + "  ".join(f"{chr(ord('a')+c):<8}" for c in range(g.n)))
     print()
 
 
@@ -99,7 +94,7 @@ def index():
 @app.route("/new_game", methods=["POST"])
 def new_game():
     global game, move_history, game_over, winner_msg
-    game         = Game(3, "None")
+    game         = Game(5, "None")
     move_history = []
     game_over    = False
     winner_msg   = ""

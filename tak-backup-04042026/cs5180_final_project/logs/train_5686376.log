@@ -1,0 +1,18 @@
+Using device: cuda
+  checkpoint saved at iter 2
+  checkpoint saved at iter 4
+  checkpoint saved at iter 6
+  checkpoint saved at iter 8
+  checkpoint saved at iter 10
+  checkpoint saved at iter 12
+  checkpoint saved at iter 14
+  checkpoint saved at iter 16
+  checkpoint saved at iter 18
+  checkpoint saved at iter 20
+  checkpoint saved at iter 22
+  checkpoint saved at iter 24
+  checkpoint saved at iter 26
+  checkpoint saved at iter 28
+  checkpoint saved at iter 30
+Saved tak_checkpoints/best.pt
+Plot saved to training_curves.png

@@ -1,0 +1,48 @@
+==== Job started at Sun Apr  5 02:39:11 AM EDT 2026 ====
+Node: d1026
+Python: /home/navindgikar.r/.conda/envs/takrl/bin/python
+Python 3.10.20
+GPU before run:
+Sun Apr  5 02:39:11 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 570.86.15              Driver Version: 570.86.15      CUDA Version: 12.8     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-40GB          On  |   00000000:01:00.0 Off |                    0 |
+| N/A   34C    P0             69W /  400W |       1MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA A100-SXM4-40GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   31C    P0             70W /  400W |       1MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Using device: cuda
+  checkpoint saved at iter 2
+  checkpoint saved at iter 4
+  checkpoint saved at iter 6
+  checkpoint saved at iter 8
+  checkpoint saved at iter 10
+  checkpoint saved at iter 12
+  checkpoint saved at iter 14
+  checkpoint saved at iter 16
+  checkpoint saved at iter 18
+  checkpoint saved at iter 20
+  checkpoint saved at iter 22
+  checkpoint saved at iter 24
+  checkpoint saved at iter 26
+  checkpoint saved at iter 28
+  checkpoint saved at iter 30
+Saved tak_checkpoints/best.pt
+Plot saved to training_curves.png
+==== Job finished at Sun Apr  5 06:04:45 AM EDT 2026 ====
