@@ -37,7 +37,7 @@ BATCH       = 512
 EVAL_GAMES  = 10
 LR          = 1e-4
 BUFFER_MAX  = 100000
-ACCEPT_THR  = 0.0
+ACCEPT_THR  = 0.55
 HIDDEN      = 256
 
 
@@ -533,7 +533,7 @@ def pit(net_new, net_old, n_games=20, n_sims=50, device='cpu'):
     return nw, ow, d
 
 
-os.makedirs("tak_checkpoints", exist_ok=True)
+os.makedirs("tak_checkpoints_v2", exist_ok=True)
 
 """## 7. Training Loop"""
 
@@ -549,7 +549,7 @@ net = TakNet(h=HIDDEN).to(device)
 # net.load_state_dict(torch.load("checkpoints/alpha-zero-v1.pt", map_location=device))
 
 opt      = torch.optim.Adam(net.parameters(), lr=LR, weight_decay=1e-4)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=ITERATIONS, eta_min=1e-4)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=ITERATIONS, eta_min=1e-5)
 buf      = Buffer(BUFFER_MAX)
 
 
@@ -596,11 +596,13 @@ with mp.Pool(processes=NUM_CPUS) as pool:
         nw, ow, d = pit(net, best_net, EVAL_GAMES, SIMS, device=device)
         total  = nw + ow + d
         # accept = total > 0 and (nw / total) >= ACCEPT_THR
-        # if accept:
-        #     best_net = copy.deepcopy(net)
-
-        best_net = copy.deepcopy(net)
-        accept = True
+        if it < 20:
+            best_net = copy.deepcopy(net)
+            accept = True
+        else:
+            accept = total > 0 and (nw / total) >= ACCEPT_THR
+            if accept:
+                best_net = copy.deepcopy(net)
         # --- log ---
         log["iter"].append(it)
         log["p_loss"].append(np.mean(p_losses))
@@ -622,15 +624,15 @@ with mp.Pool(processes=NUM_CPUS) as pool:
 
         # Save checkpoints
         if it % 2 == 0:
-            torch.save(best_net.state_dict(), f"tak_checkpoints/best.pt")
-            torch.save(best_net.state_dict(), f"tak_checkpoints/iter_{it:04d}.pt")
+            torch.save(best_net.state_dict(), f"tak_checkpoints_v2/best.pt")
+            torch.save(best_net.state_dict(), f"tak_checkpoints_v2/iter_{it:04d}.pt")
             print(f"  checkpoint saved at iter {it}")
 
 """## 8. Save Model + Plot"""
 
-os.makedirs("tak_checkpoints", exist_ok=True)
-torch.save(best_net.state_dict(), "tak_checkpoints/best.pt")
-print("Saved tak_checkpoints/best.pt")
+os.makedirs("tak_checkpoints_v2", exist_ok=True)
+torch.save(best_net.state_dict(), "tak_checkpoints_v2/best.pt")
+print("Saved tak_checkpoints_v2/best.pt")
 
 
 
@@ -652,5 +654,5 @@ axes[2].set_title("Game Outcomes per Iteration")
 axes[2].legend(); axes[2].set_xlabel("Iteration")
 
 plt.tight_layout()
-plt.savefig("training_curves.png", dpi=150)
-print("Plot saved to training_curves.png")
+plt.savefig("training_curves_v2.png", dpi=150)
+print("Plot saved to training_curves_v2.png")
